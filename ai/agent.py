@@ -248,6 +248,31 @@ if __name__ == "__main__":
                     f"{backend['routes']}"
                 )
 
+            print()
+            print("=" * 60)
+            print("🔍 RepoMind Diagnosis")
+            print("=" * 60)
+
+            print("Bug: API endpoint mismatch")
+            print(
+                f"Frontend: {mismatch['frontend']}"
+            )
+
+            print(
+                f"Called:   {mismatch['called_api']}"
+            )
+
+            print("\nBackend provides:")
+
+            for backend in mismatch[
+                "backend_routes"
+            ]:
+
+                print(
+                    f"   → {backend['file']}: "
+                    f"{backend['routes']}"
+                )
+
             print(
                 "\n🔎 Root Cause:"
             )
@@ -260,7 +285,7 @@ if __name__ == "__main__":
             )
 
             print(
-                "\n💡 Suggested Fix:"
+                "\n💡 Fix:"
             )
 
             print(
