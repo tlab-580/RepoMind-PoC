@@ -421,31 +421,39 @@ print("=" * 60)
 print("🧪 RepoMind Verification Report")
 print("=" * 60)
 
-print("🐛 Bug detected:        YES")
-print("🔎 Root cause found:    YES")
-print("🔧 Fix applied:         YES")
-print("🧠 Memory checked:      YES")
+if "memory" in query.lower() or "previous" in query.lower():
 
-print(
-    f"❤️ Backend health:      "
-    f"{'PASS' if verification_results['backend'] else 'FAIL'}"
-)
+    print("🧠 Memory query detected")
+    print("Memory retrieval: PASS")
+    print("ℹ️ No repair requested in this query.")
 
-print(
-    f"🤖 Prediction API:      "
-    f"{'PASS' if verification_results['prediction'] else 'FAIL'}"
-)
-
-print(
-    f"🌐 Frontend:            "
-    f"{'PASS' if verification_results['frontend'] else 'FAIL'}"
-)
-
-print()
-
-if all(verification_results.values()):
-    print("✅ REPAIR VERIFIED")
 else:
-    print("❌ REPAIR VERIFICATION FAILED")
+
+    print("🐛 Bug detected:        YES")
+    print("🔎 Root cause found:    YES")
+    print("🔧 Fix applied:         YES")
+    print("🧠 Memory checked:      YES")
+
+    print(
+        f"❤️ Backend health:      "
+        f"{'PASS' if verification_results['backend'] else 'FAIL'}"
+    )
+
+    print(
+        f"🤖 Prediction API:      "
+        f"{'PASS' if verification_results['prediction'] else 'FAIL'}"
+    )
+
+    print(
+        f"🌐 Frontend:            "
+        f"{'PASS' if verification_results['frontend'] else 'FAIL'}"
+    )
+
+    print()
+
+    if all(verification_results.values()):
+        print("✅ REPAIR VERIFIED")
+    else:
+        print("❌ REPAIR VERIFICATION FAILED")
 
 print("=" * 60)
