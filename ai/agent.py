@@ -165,49 +165,44 @@ if __name__ == "__main__":
         query
     )
 
+    print()
+    print("=" * 60)
+    print("🧠 RepoMind Repository Intelligence")
+    print("=" * 60)
+
     print(
-        "\nRepoMind Repository Context"
+        f"Query: {query}"
     )
 
     print(
-        "=" * 60
+        f"Relevant files discovered: {len(results)}"
     )
 
     for result in results:
 
+        print()
         print(
-            f"\n📄 {result['file']}"
+            f"📄 {result['file']}"
         )
 
         print(
-            f"Relevance: "
+            f"   Relevance: "
             f"{result['score']:.4f}"
         )
 
         if result["related_files"]:
 
-            print(
-                "Related files:"
-            )
+            print("   🔗 Relationships:")
 
             for related in result[
                 "related_files"
             ]:
 
                 print(
-                    f"   → "
+                    f"      → "
                     f"{related['relationship']}: "
                     f"{related['file']}"
                 )
-
-        print(
-            "\nCode preview:"
-        )
-
-        print(
-            result["content"][:300]
-        )
-
     # ============================================================
     # API MISMATCH DETECTION
     # ============================================================
