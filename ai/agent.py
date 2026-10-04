@@ -403,57 +403,47 @@ if __name__ == "__main__":
     ):
 
         agent.explain_prediction_flow()
+
 # ============================================================
 # REAL VERIFICATION REPORT
 # ============================================================
 
 from verification import run_verification
 import json
+
 verification_results = run_verification()
+
 with open(
     "repomind_report.json",
     "r",
     encoding="utf-8"
 ) as file:
     verification_report = json.load(file)
+
 print()
 print("=" * 60)
 print("🧪 RepoMind Verification Report")
-print("=" * 60)
 
-if "memory" in query.lower() or "previous" in query.lower():
+print(
+    f"❤️ Backend health:      "
+    f"{'PASS' if verification_results['backend'] else 'FAIL'}"
+)
 
-    print("🧠 Memory query detected")
-    print("Memory retrieval: PASS")
-    print("ℹ️ No repair requested in this query.")
+print(
+    f"🤖 Prediction API:      "
+    f"{'PASS' if verification_results['prediction'] else 'FAIL'}"
+)
 
+print(
+    f"🌐 Frontend:            "
+    f"{'PASS' if verification_results['frontend'] else 'FAIL'}"
+)
+
+print()
+
+if all(verification_results.values()):
+    print("✅ REPAIR VERIFIED")
 else:
-
-    print("🐛 Bug detected:        YES")
-    print("🔎 Root cause found:    YES")
-    print("🔧 Fix applied:         YES")
-    print("🧠 Memory checked:      YES")
-
-    print(
-        f"❤️ Backend health:      "
-        f"{'PASS' if verification_results['backend'] else 'FAIL'}"
-    )
-
-    print(
-        f"🤖 Prediction API:      "
-        f"{'PASS' if verification_results['prediction'] else 'FAIL'}"
-    )
-
-    print(
-        f"🌐 Frontend:            "
-        f"{'PASS' if verification_results['frontend'] else 'FAIL'}"
-    )
-
-    print()
-
-    if all(verification_results.values()):
-        print("✅ REPAIR VERIFIED")
-    else:
-        print("❌ REPAIR VERIFICATION FAILED")
+    print("❌ REPAIR VERIFICATION FAILED")
 
 print("=" * 60)
