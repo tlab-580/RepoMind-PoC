@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pathlib import Path
 import sys
+import shutil
+import subprocess
+import tempfile
+from urllib.parse import urlparse
 
 # Allow imports from the RepoMind project root
 ROOT = Path(__file__).resolve().parent.parent
@@ -49,61 +53,134 @@ def health():
     }
 
 
+
 @app.post("/analyze")
 def analyze(request: AnalyzeRequest):
+    repository = request.repository.strip()
+    query = request.query.strip()
 
-    repository = request.repository
-    query = request.query
-
-    repo_path = Path(repository)
-
-    if not repo_path.exists():
+    if not repository or not query:
         return {
             "success": False,
-            "error": f"Repository not found: {repository}",
+            "error": "Repository and query are required.",
         }
 
+    original_repository = repository
+    temporary_directory = None
+
     try:
-        agent = RepoMindAgent(repository)
+        if repository.startswith(("https://", "http://")):
+            parsed = urlparse(repository)
 
-        # Repository-aware retrieval
+            # Accept only ordinary public GitHub repository URLs.
+            if (
+                parsed.scheme != "https"
+                or parsed.hostname != "github.com"
+                or parsed.port not in (None, 443)
+                or parsed.username
+                or parsed.password
+                or parsed.query
+                or parsed.fragment
+            ):
+                return {
+                    "success": False,
+                    "error": "Use a valid HTTPS URL for a public GitHub repository.",
+                }
+
+            parts = parsed.path.strip("/").split("/")
+
+            if (
+                len(parts) != 2
+                or not parts[0]
+                or not parts[1]
+                or parts[1].endswith(".git.git")
+            ):
+                return {
+                    "success": False,
+                    "error": "Enter a GitHub URL in the format https://github.com/owner/repository",
+                }
+
+            owner, repo_name = parts
+            if repo_name.endswith(".git"):
+                repo_name = repo_name[:-4]
+
+            import re
+
+            if not all(
+                re.fullmatch(r"[A-Za-z0-9_.-]+", part)
+                for part in (owner, repo_name)
+            ):
+                return {
+                    "success": False,
+                    "error": "Invalid GitHub repository URL.",
+                }
+
+            clone_url = f"https://github.com/{owner}/{repo_name}.git"
+            temporary_directory = tempfile.TemporaryDirectory(
+                prefix="repomind-"
+            )
+            repo_path = Path(temporary_directory.name) / "repository"
+
+            # Clone only the latest commit; abort if cloning takes too long.
+            subprocess.run(
+                [
+                    "git",
+                    "clone",
+                    "--depth", "1",
+                    "--single-branch",
+                    clone_url,
+                    str(repo_path),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=90,
+            )
+
+        else:
+            # Retain support for paths available on the backend machine.
+            repo_path = Path(repository).resolve()
+
+            if not repo_path.is_dir():
+                return {
+                    "success": False,
+                    "error": (
+                        f"Repository directory not found: {repository}. "
+                        "For a deployed repository, enter a public GitHub URL."
+                    ),
+                }
+
+        agent = RepoMindAgent(str(repo_path))
+
         results = agent.search(query)
-
-        # Detect API mismatches
         mismatches = agent.graph.detect_api_mismatches()
-
-        # Previous debugging memory
         memory_results = agent.search_memory(query)
 
         relationships = []
 
         for file_path in agent.graph.graph.nodes:
-
-            node_data = agent.graph.graph.nodes[file_path]
-
             for target in agent.graph.graph.successors(file_path):
-
                 edge_data = agent.graph.graph.get_edge_data(
-                    file_path,
-                    target
+                    file_path, target
                 )
 
                 if edge_data:
-
                     relationships.append({
-                        "source": file_path,
-                        "target": target,
-                        "relationship": edge_data.get("relationship", "")
+                        "source": str(file_path),
+                        "target": str(target),
+                        "relationship": edge_data.get(
+                            "relationship", ""
+                        ),
                     })
 
         return {
             "success": True,
-            "repository": repository,
+            "repository": original_repository,
             "query": query,
             "files": [
                 {
-                    "path": path,
-                    "score": round(score, 4)
+                    "path": str(path),
+                    "score": round(score, 4),
                 }
                 for path, score in results[:5]
             ],
@@ -112,9 +189,27 @@ def analyze(request: AnalyzeRequest):
             "memory": memory_results,
         }
 
-    except Exception as e:
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "error": "Cloning timed out. Try a smaller public repository.",
+        }
 
+    except subprocess.CalledProcessError:
+        return {
+            "success": False,
+            "error": (
+                "Could not clone the repository. Check that the GitHub "
+                "URL is correct and the repository is public."
+            ),
+        }
+
+    except Exception as e:
         return {
             "success": False,
             "error": str(e),
         }
+
+    finally:
+        if temporary_directory is not None:
+            temporary_directory.cleanup()
