@@ -4,55 +4,80 @@ import "./App.css";
 function App() {
   const [query, setQuery] = useState("");
   const [repoPath, setRepoPath] = useState(
-    "C:\\Users\\DELL\\LANDGUARD-AI"
+    "https://github.com/tlab-580/LandGuardAI"
   );
 
   const [analyzing, setAnalyzing] = useState(false);
   const [status, setStatus] = useState("Ready");
 
+  const [analysis, setAnalysis] = useState(null);
+  const [error, setError] = useState("");
+
   const analyzeRepository = async () => {
-  if (!query.trim()) {
-    setStatus("Enter a query first");
-    return;
-  }
-
-  setAnalyzing(true);
-  setStatus("Analyzing repository...");
-
-  try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/analyze`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        repository: repoPath,
-        query: query,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!data.success) {
-      setStatus("Analysis failed");
-      console.error(data.error);
+    if (!repoPath.trim()) {
+      setStatus("Enter a GitHub repository URL");
       return;
     }
 
-    console.log("RepoMind Analysis:", data);
+    if (!query.trim()) {
+      setStatus("Enter a query first");
+      return;
+    }
 
-    setStatus("Analysis complete");
+    if (
+      !repoPath.startsWith("https://github.com/")
+    ) {
+      setStatus("Enter a valid GitHub repository URL");
+      return;
+    }
 
-  } catch (error) {
-    console.error("RepoMind API error:", error);
-    setStatus("Backend connection failed");
-  } finally {
-    setAnalyzing(false);
-  }
-};
+    setAnalyzing(true);
+    setStatus("Analyzing repository...");
+    setError("");
+    setAnalysis(null);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/analyze`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            repository: repoPath.trim(),
+            query: query.trim(),
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        const message =
+          data.error || `Request failed with status ${response.status}`;
+
+        setError(message);
+        setStatus("Analysis failed");
+        return;
+      }
+
+      console.log("RepoMind Analysis:", data);
+
+      setAnalysis(data);
+      setStatus("Analysis complete");
+    } catch (error) {
+      console.error("RepoMind API error:", error);
+      setError(error.message);
+      setStatus("Backend connection failed");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   return (
     <div className="app">
+
       {/* Header */}
       <header className="header">
         <div>
@@ -74,7 +99,9 @@ function App() {
             <span>📁</span>
             <div>
               <h2>Repository</h2>
-              <p>Select the project RepoMind should understand.</p>
+              <p>
+                Enter a public GitHub repository RepoMind should understand.
+              </p>
             </div>
           </div>
 
@@ -82,10 +109,19 @@ function App() {
             <input
               value={repoPath}
               onChange={(e) => setRepoPath(e.target.value)}
-              placeholder="Repository path"
+              placeholder="https://github.com/owner/repository"
             />
 
-            <button onClick={() => setStatus("Repository scanned")}>
+            <button
+              onClick={() => {
+                if (!repoPath.trim()) {
+                  setStatus("Enter a GitHub repository URL");
+                  return;
+                }
+
+                setStatus("Repository ready");
+              }}
+            >
               Scan
             </button>
           </div>
@@ -105,7 +141,7 @@ function App() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Example: Fix the API bug"
+              placeholder="Example: Find API mismatches in this repository"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   analyzeRepository();
@@ -121,147 +157,235 @@ function App() {
               {analyzing ? "Analyzing..." : "Analyze"}
             </button>
           </div>
+
+          {error && (
+            <div className="error-box">
+              <strong>Analysis Error</strong>
+              <p>{error}</p>
+            </div>
+          )}
         </section>
 
-        {/* Code Intelligence */}
-        <section className="card">
-          <div className="section-title">
-            <span>🔗</span>
-            <div>
-              <h2>Code Intelligence</h2>
-              <p>Repository relationships discovered by RepoMind.</p>
-            </div>
-          </div>
-
-          <div className="flow">
-            <div className="flow-box">
-              <strong>frontend/src/App.jsx</strong>
-              <span>Frontend</span>
-            </div>
-
-            <div className="arrow">→</div>
-
-            <div className="flow-box">
-              <strong>backend/main.py</strong>
-              <span>FastAPI Backend</span>
-            </div>
-
-            <div className="arrow">→</div>
-
-            <div className="flow-box">
-              <strong>landslide_risk_model.pkl</strong>
-              <span>ML Model</span>
-            </div>
-          </div>
-        </section>
-
-        {/* Bug Diagnosis */}
-        <section className="grid">
-
-          <div className="card">
-            <div className="section-title">
-              <span>🐛</span>
-              <div>
-                <h2>Bug Diagnosis</h2>
-                <p>Repository-aware root cause analysis.</p>
-              </div>
-            </div>
-
-            <div className="diagnosis">
-              <div className="badge danger">
-                API Mismatch
+        {/* Results */}
+        {analysis && (
+          <>
+            {/* Repository Results */}
+            <section className="card">
+              <div className="section-title">
+                <span>📊</span>
+                <div>
+                  <h2>Analysis Results</h2>
+                  <p>
+                    Results generated from the repository by RepoMind.
+                  </p>
+                </div>
               </div>
 
-              <p>
-                Frontend calls:
-              </p>
+              <div className="result-summary">
+                <p>
+                  <strong>Repository:</strong>{" "}
+                  {analysis.repository}
+                </p>
 
-              <code>/predict-risk-wrong</code>
-
-              <p>
-                Backend provides:
-              </p>
-
-              <code>/predict-risk</code>
-
-              <h3>Root Cause</h3>
-
-              <p>
-                The frontend API endpoint does not match any
-                available backend route.
-              </p>
-            </div>
-          </div>
-
-          {/* Fix */}
-          <div className="card">
-            <div className="section-title">
-              <span>🔧</span>
-              <div>
-                <h2>Proposed Fix</h2>
-                <p>Targeted repository repair.</p>
+                <p>
+                  <strong>Query:</strong>{" "}
+                  {analysis.query}
+                </p>
               </div>
-            </div>
+            </section>
 
-            <div className="fix-box">
-              <div className="old">
-                - /predict-risk-wrong
+            {/* Code Intelligence */}
+            <section className="card">
+              <div className="section-title">
+                <span>🔗</span>
+                <div>
+                  <h2>Code Intelligence</h2>
+                  <p>
+                    Repository relationships discovered by RepoMind.
+                  </p>
+                </div>
               </div>
 
-              <div className="new">
-                + /predict-risk
+              {analysis.relationships &&
+              analysis.relationships.length > 0 ? (
+                <div className="relationships">
+                  {analysis.relationships
+                    .slice(0, 10)
+                    .map((relationship, index) => (
+                      <div
+                        className="relationship"
+                        key={index}
+                      >
+                        <strong>
+                          {relationship.source}
+                        </strong>
+
+                        <span className="arrow">
+                          →
+                        </span>
+
+                        <strong>
+                          {relationship.target}
+                        </strong>
+
+                        {relationship.relationship && (
+                          <span className="relationship-type">
+                            {relationship.relationship}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p>No repository relationships were discovered.</p>
+              )}
+            </section>
+
+            {/* Relevant Files */}
+            <section className="card">
+              <div className="section-title">
+                <span>📄</span>
+                <div>
+                  <h2>Relevant Files</h2>
+                  <p>
+                    Files ranked against your query.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <button
-              className="fix-button"
-              onClick={() => setStatus("Fix applied")}
-            >
-              Apply Fix
-            </button>
-          </div>
+              {analysis.files &&
+              analysis.files.length > 0 ? (
+                <div className="files-list">
+                  {analysis.files.map((file, index) => (
+                    <div
+                      className="file-result"
+                      key={index}
+                    >
+                      <span>{file.path}</span>
 
-        </section>
+                      <strong>
+                        {file.score}
+                      </strong>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p>No relevant files found.</p>
+              )}
+            </section>
 
-        {/* Verification */}
-        <section className="card">
-          <div className="section-title">
-            <span>🧪</span>
-            <div>
-              <h2>Verification</h2>
-              <p>Real system checks after the repair.</p>
-            </div>
-          </div>
+            {/* Bug Diagnosis */}
+            <section className="card">
+              <div className="section-title">
+                <span>🐛</span>
+                <div>
+                  <h2>Bug Diagnosis</h2>
+                  <p>
+                    Repository-aware analysis results.
+                  </p>
+                </div>
+              </div>
 
-          <div className="verification">
+              {analysis.mismatches &&
+              analysis.mismatches.length > 0 ? (
+                <div className="diagnosis">
+                  <div className="badge danger">
+                    API Mismatch
+                  </div>
 
-            <div className="check">
-              <span>❤️ Backend Health</span>
-              <strong>PASS</strong>
-            </div>
+                  <pre>
+                    {JSON.stringify(
+                      analysis.mismatches,
+                      null,
+                      2
+                    )}
+                  </pre>
+                </div>
+              ) : (
+                <div className="diagnosis">
+                  <div className="badge">
+                    No API Mismatch Detected
+                  </div>
 
-            <div className="check">
-              <span>🤖 Prediction API</span>
-              <strong>PASS</strong>
-            </div>
+                  <p>
+                    RepoMind did not report an API mismatch
+                    for this analysis.
+                  </p>
+                </div>
+              )}
+            </section>
 
-            <div className="check">
-              <span>🌐 Frontend</span>
-              <strong>PASS</strong>
-            </div>
+            {/* Memory */}
+            <section className="card">
+              <div className="section-title">
+                <span>🧠</span>
+                <div>
+                  <h2>RepoMind Memory</h2>
+                  <p>
+                    Repository knowledge retrieved from memory.
+                  </p>
+                </div>
+              </div>
 
-          </div>
+              {analysis.memory &&
+              analysis.memory.length > 0 ? (
+                <pre>
+                  {JSON.stringify(
+                    analysis.memory,
+                    null,
+                    2
+                  )}
+                </pre>
+              ) : (
+                <p>
+                  No stored repository memory was returned.
+                </p>
+              )}
+            </section>
 
-          <div className="verified">
-            ✅ REPAIR VERIFIED
-          </div>
-        </section>
+            {/* Verification */}
+            <section className="card">
+              <div className="section-title">
+                <span>🧪</span>
+                <div>
+                  <h2>Verification</h2>
+                  <p>
+                    Results returned by the current analysis.
+                  </p>
+                </div>
+              </div>
+
+              <div className="verification">
+
+                <div className="check">
+                  <span>🔍 Repository Analysis</span>
+                  <strong>PASS</strong>
+                </div>
+
+                <div className="check">
+                  <span>🧠 Query Processing</span>
+                  <strong>PASS</strong>
+                </div>
+
+                <div className="check">
+                  <span>🔗 Relationship Analysis</span>
+                  <strong>
+                    {analysis.relationships
+                      ? "PASS"
+                      : "N/A"}
+                  </strong>
+                </div>
+
+              </div>
+
+              <div className="verified">
+                ✅ ANALYSIS COMPLETED
+              </div>
+            </section>
+          </>
+        )}
 
       </main>
-
-      <footer>
-        RepoMind • Understand. Remember. Reason. Fix. Verify.
-      </footer>
     </div>
   );
 }
