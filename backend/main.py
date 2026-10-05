@@ -24,15 +24,15 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173",
-    "http://localhost:5175",
-    "https://repo-mind-po-pjwhwj7mn-tad10.vercel.app",
-    "https://repo-mind-po-1ejr4hxd2-tad10.vercel.app",],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5175",
+    ],
+    allow_origin_regex=r"https://repo-mind-po-.*-tad10\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 class AnalyzeRequest(BaseModel):
     repository: str
