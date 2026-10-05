@@ -150,7 +150,7 @@ def analyze(request: AnalyzeRequest):
                     ),
                 }
 
-        agent = RepoMindAgent(str(repo_path))
+                agent = RepoMindAgent(str(repo_path))
 
         results = agent.search(query)
         mismatches = agent.api_mismatches
@@ -158,20 +158,20 @@ def analyze(request: AnalyzeRequest):
 
         relationships = []
 
-for file_path in agent.graph.nodes:
-    for target in agent.graph.successors(file_path):
-        edge_data = agent.graph.get_edge_data(
-            file_path, target
-        )
+        for file_path in agent.graph.nodes:
+            for target in agent.graph.successors(file_path):
+                edge_data = agent.graph.get_edge_data(
+                    file_path, target
+                )
 
-        if edge_data:
-            relationships.append({
-                "source": str(file_path),
-                "target": str(target),
-                "relationship": edge_data.get(
-                    "relationship", ""
-                ),
-            })
+                if edge_data:
+                    relationships.append({
+                        "source": str(file_path),
+                        "target": str(target),
+                        "relationship": edge_data.get(
+                            "relationship", ""
+                        ),
+                    })
 
         return {
             "success": True,
@@ -179,16 +179,16 @@ for file_path in agent.graph.nodes:
             "query": query,
             "files": [
                 {
-                    "path": str(path),
-                    "score": round(score, 4),
+                    "path": item["file"],
+                    "score": round(item["score"], 4),
+                    "related_files": item["related_files"],
                 }
-                for path, score in results[:5]
+                for item in results[:5]
             ],
             "relationships": relationships,
             "mismatches": mismatches,
             "memory": memory_results,
         }
-
     except subprocess.TimeoutExpired:
         return {
             "success": False,
