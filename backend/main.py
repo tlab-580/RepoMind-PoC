@@ -153,7 +153,7 @@ def analyze(request: AnalyzeRequest):
         agent = RepoMindAgent(str(repo_path))
 
         results = agent.search(query)
-        mismatches = agent.api_mismatches()
+        mismatches = agent.api_mismatches
         memory_results = agent.search_memory(query)
 
         relationships = []
