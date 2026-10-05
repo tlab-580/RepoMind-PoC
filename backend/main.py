@@ -267,6 +267,3 @@ def analyze(request: AnalyzeRequest):
             "success": False,
             "error": str(e),
         }
-    finally:
-        if temporary_directory is not None:
-            temporary_directory.cleanup()
