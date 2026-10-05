@@ -24,7 +24,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173","https://repo-mind-po-pjwhwj7mn-tad10.vercel.app",],
+    allow_origins=["http://localhost:5173",
+    "http://localhost:5175",
+    "https://repo-mind-po-pjwhwj7mn-tad10.vercel.app",
+    "https://repo-mind-po-1ejr4hxd2-tad10.vercel.app",],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
