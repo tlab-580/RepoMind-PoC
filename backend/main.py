@@ -66,9 +66,11 @@ def analyze(request: AnalyzeRequest):
         }
 
     original_repository = repository
-    temporary_directory = None
 
     try:
+        # ---------------------------------------------------------
+        # Resolve repository
+        # ---------------------------------------------------------
         if repository.startswith(("https://", "http://")):
             parsed = urlparse(repository)
 
@@ -97,10 +99,14 @@ def analyze(request: AnalyzeRequest):
             ):
                 return {
                     "success": False,
-                    "error": "Enter a GitHub URL in the format https://github.com/owner/repository",
+                    "error": (
+                        "Enter a GitHub URL in the format "
+                        "https://github.com/owner/repository"
+                    ),
                 }
 
             owner, repo_name = parts
+
             if repo_name.endswith(".git"):
                 repo_name = repo_name[:-4]
 
@@ -116,26 +122,73 @@ def analyze(request: AnalyzeRequest):
                 }
 
             clone_url = f"https://github.com/{owner}/{repo_name}.git"
-            temporary_directory = tempfile.TemporaryDirectory(
-                prefix="repomind-"
-            )
-            repo_path = Path(temporary_directory.name) / "repository"
 
-            # Clone only the latest commit; abort if cloning takes too long.
-            subprocess.run(
-                [
-                    "git",
-                    "clone",
-                    "--depth", "1",
-                    "--single-branch",
-                    clone_url,
-                    str(repo_path),
-                ],
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=90,
-            )
+            # Keep the temporary repository alive for the entire
+            # analysis operation.
+            with tempfile.TemporaryDirectory(prefix="repomind-") as temp_dir:
+                repo_path = Path(temp_dir) / "repository"
+
+                # Clone only the latest commit.
+                subprocess.run(
+                    [
+                        "git",
+                        "clone",
+                        "--depth",
+                        "1",
+                        "--single-branch",
+                        clone_url,
+                        str(repo_path),
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=90,
+                )
+
+                # Analyze while the temporary clone still exists.
+                agent = RepoMindAgent(str(repo_path))
+
+                results = agent.search(query)
+                mismatches = agent.api_mismatches
+                memory_results = agent.search_memory(query)
+
+                relationships = []
+
+                for file_path in agent.graph.nodes:
+                    for target in agent.graph.successors(file_path):
+                        edge_data = agent.graph.get_edge_data(
+                            file_path,
+                            target,
+                        )
+
+                        if edge_data:
+                            relationships.append(
+                                {
+                                    "source": str(file_path),
+                                    "target": str(target),
+                                    "relationship": edge_data.get(
+                                        "relationship",
+                                        "",
+                                    ),
+                                }
+                            )
+
+                return {
+                    "success": True,
+                    "repository": original_repository,
+                    "query": query,
+                    "files": [
+                        {
+                            "path": item["file"],
+                            "score": round(item["score"], 4),
+                            "related_files": item["related_files"],
+                        }
+                        for item in results[:5]
+                    ],
+                    "relationships": relationships,
+                    "mismatches": mismatches,
+                    "memory": memory_results,
+                }
 
         else:
             # Retain support for paths available on the backend machine.
@@ -150,45 +203,50 @@ def analyze(request: AnalyzeRequest):
                     ),
                 }
 
-                agent = RepoMindAgent(str(repo_path))
+            agent = RepoMindAgent(str(repo_path))
 
-        results = agent.search(query)
-        mismatches = agent.api_mismatches
-        memory_results = agent.search_memory(query)
+            results = agent.search(query)
+            mismatches = agent.api_mismatches
+            memory_results = agent.search_memory(query)
 
-        relationships = []
+            relationships = []
 
-        for file_path in agent.graph.nodes:
-            for target in agent.graph.successors(file_path):
-                edge_data = agent.graph.get_edge_data(
-                    file_path, target
-                )
+            for file_path in agent.graph.nodes:
+                for target in agent.graph.successors(file_path):
+                    edge_data = agent.graph.get_edge_data(
+                        file_path,
+                        target,
+                    )
 
-                if edge_data:
-                    relationships.append({
-                        "source": str(file_path),
-                        "target": str(target),
-                        "relationship": edge_data.get(
-                            "relationship", ""
-                        ),
-                    })
+                    if edge_data:
+                        relationships.append(
+                            {
+                                "source": str(file_path),
+                                "target": str(target),
+                                "relationship": edge_data.get(
+                                    "relationship",
+                                    "",
+                                ),
+                            }
+                        )
 
-        return {
-            "success": True,
-            "repository": original_repository,
-            "query": query,
-            "files": [
-                {
-                    "path": item["file"],
-                    "score": round(item["score"], 4),
-                    "related_files": item["related_files"],
-                }
-                for item in results[:5]
-            ],
-            "relationships": relationships,
-            "mismatches": mismatches,
-            "memory": memory_results,
-        }
+            return {
+                "success": True,
+                "repository": original_repository,
+                "query": query,
+                "files": [
+                    {
+                        "path": item["file"],
+                        "score": round(item["score"], 4),
+                        "related_files": item["related_files"],
+                    }
+                    for item in results[:5]
+                ],
+                "relationships": relationships,
+                "mismatches": mismatches,
+                "memory": memory_results,
+            }
+
     except subprocess.TimeoutExpired:
         return {
             "success": False,
@@ -209,7 +267,6 @@ def analyze(request: AnalyzeRequest):
             "success": False,
             "error": str(e),
         }
-
     finally:
         if temporary_directory is not None:
             temporary_directory.cleanup()
