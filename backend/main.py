@@ -158,20 +158,20 @@ def analyze(request: AnalyzeRequest):
 
         relationships = []
 
-        for file_path in agent.graph.graph.nodes:
-            for target in agent.graph.graph.successors(file_path):
-                edge_data = agent.graph.graph.get_edge_data(
-                    file_path, target
-                )
+for file_path in agent.graph.nodes:
+    for target in agent.graph.successors(file_path):
+        edge_data = agent.graph.get_edge_data(
+            file_path, target
+        )
 
-                if edge_data:
-                    relationships.append({
-                        "source": str(file_path),
-                        "target": str(target),
-                        "relationship": edge_data.get(
-                            "relationship", ""
-                        ),
-                    })
+        if edge_data:
+            relationships.append({
+                "source": str(file_path),
+                "target": str(target),
+                "relationship": edge_data.get(
+                    "relationship", ""
+                ),
+            })
 
         return {
             "success": True,
