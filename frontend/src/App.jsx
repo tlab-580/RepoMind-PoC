@@ -343,45 +343,76 @@ function App() {
               )}
             </section>
 
-            {/* Verification */}
-            <section className="card">
-              <div className="section-title">
-                <span>🧪</span>
-                <div>
-                  <h2>Verification</h2>
-                  <p>
-                    Results returned by the current analysis.
-                  </p>
-                </div>
-              </div>
+           {/* Verification */}
+<section className="card">
+  <div className="section-title">
+    <span>🧪</span>
+    <div>
+      <h2>Analysis Verification</h2>
+      <p>
+        Checks based on the results returned by RepoMind.
+      </p>
+    </div>
+  </div>
 
-              <div className="verification">
+  <div className="verification">
 
-                <div className="check">
-                  <span>🔍 Repository Analysis</span>
-                  <strong>PASS</strong>
-                </div>
+    <div className="check">
+      <span>🔍 Repository Analysis</span>
+      <strong>
+        {analysis.success ? "PASS" : "FAIL"}
+      </strong>
+    </div>
 
-                <div className="check">
-                  <span>🧠 Query Processing</span>
-                  <strong>PASS</strong>
-                </div>
+    <div className="check">
+      <span>💬 Query Processing</span>
+      <strong>
+        {analysis.query ? "PASS" : "FAIL"}
+      </strong>
+    </div>
 
-                <div className="check">
-                  <span>🔗 Relationship Analysis</span>
-                  <strong>
-                    {analysis.relationships
-                      ? "PASS"
-                      : "N/A"}
-                  </strong>
-                </div>
+    <div className="check">
+      <span>📄 Relevant Files</span>
+      <strong>
+        {analysis.files && analysis.files.length > 0
+          ? "PASS"
+          : "NONE"}
+      </strong>
+    </div>
 
-              </div>
+    <div className="check">
+      <span>🔗 Relationship Analysis</span>
+      <strong>
+        {analysis.relationships
+          ? "PASS"
+          : "NONE"}
+      </strong>
+    </div>
 
-              <div className="verified">
-                ✅ ANALYSIS COMPLETED
-              </div>
-            </section>
+    <div className="check">
+      <span>🐛 API Mismatch Detection</span>
+      <strong>
+        {analysis.mismatches
+          ? "PASS"
+          : "NONE"}
+      </strong>
+    </div>
+
+    <div className="check">
+      <span>🧠 Repository Memory</span>
+      <strong>
+        {analysis.memory ? "AVAILABLE" : "NONE"}
+      </strong>
+    </div>
+
+  </div>
+
+  <div className="verified">
+    {analysis.success
+      ? "✅ ANALYSIS COMPLETED"
+      : "⚠️ ANALYSIS INCOMPLETE"}
+  </div>
+</section>
           </>
         )}
 
